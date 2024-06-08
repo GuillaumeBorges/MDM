@@ -1,2 +1,2 @@
 # MDM
-Manipulação de Dados Massivos - Mercado Financeiro
+Mineração de Dados Massivos - Mercado Financeiro
