@@ -24,6 +24,7 @@ Mineração de Dados Massivos - Mercado Financeiro
     - **train.py**: Funções de treinamento do modelo.
   - **src/utils/**: Módulo para funções auxiliares e utilitárias.
     - **helpers.py**: Funções auxiliares e utilitárias.
+    - **config.py**: Funções auxiliares e utilitárias para configuração.
   - **src/visualize/**: Módulo para funções de visualização de dados.
     - **visualize.py**: Funções de visualização de dados.
   - **main.py**: Script principal para execução do projeto.
