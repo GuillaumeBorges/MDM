@@ -21,7 +21,7 @@ def main() -> None:
     # Carregar e processar dados
     data = download_data(ticker, start_date, end_date)
     scaled_data, scaler = preprocess_data(data)
-    X, y = create_dataset(scaled_data, time_step)
+    X, y = create_dataset(scaled_data, time_step) # Rede Neural LSTM
 
     # Dividir dados em treinamento e teste
     train_size = int(len(X) * 0.8)
