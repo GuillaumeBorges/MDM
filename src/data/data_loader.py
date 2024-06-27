@@ -1,7 +1,9 @@
 from typing import Any
 from utils.config import load_config
 import yfinance as yf
+import pandas as pd
 from pandas import DataFrame
+from utils.helpers import read_path
 
 
 def download_data(ticker, start_date, end_date):
@@ -9,15 +11,8 @@ def download_data(ticker, start_date, end_date):
     return data
 
 
-config = load_config()
+def load_data_raw() -> DataFrame:
 
-# Acessar as configurações
-ticker = config['ticker']
-start_date = config['start_date']
-end_date = config['end_date']
-time_step = config['time_step']
-epochs = config['epochs']
-batch_size = config['batch_size']
+    data: DataFrame = pd.read_csv(read_path('data/raw', 'winfut.csv'))
+    return data
 
-df = download_data(ticker, start_date, end_date)
-print(df.head())

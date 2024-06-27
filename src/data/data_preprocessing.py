@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 from pandas import DataFrame
 from sklearn.preprocessing import MinMaxScaler
+from data.data_loader import load_data_raw
 
 def preprocess_data(data: DataFrame):
     close_prices = data['Close'].values.reshape(-1, 1)
@@ -18,15 +19,9 @@ def create_dataset(data: DataFrame, time_step=60):
         y.append(data[i + time_step, 0])
     return np.array(X), np.array(y)
 
-def create_timeframe(timeframe='15min'):
-    # Obter o caminho absoluto do diretório do script atual
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-
-    # Calcular o caminho absoluto do arquivo de configuração a partir do diretório raiz do projeto
-    project_root = os.path.abspath(os.path.join(script_dir, os.pardir, os.pardir))
-    file_path = os.path.join(project_root, 'data/raw', 'winfut.csv')
-
-    data = pd.read_csv(file_path)
+def create_timeframe(timeframe='60min'):
+   
+    data: DataFrame = load_data_raw()
 
     # Converter a coluna de data/hora para o formato datetime
     data['Date'] = pd.to_datetime(data['Date'], dayfirst=True)
