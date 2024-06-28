@@ -12,7 +12,6 @@ def download_data(ticker, start_date, end_date):
 
 
 def load_data_raw() -> DataFrame:
-
     data: DataFrame = pd.read_csv(read_path('data/raw', 'winfut.csv'))
     return data
 
