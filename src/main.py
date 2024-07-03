@@ -1,11 +1,11 @@
 import os
 import pandas as pd
 
-from data.data_loader import load_data_raw
-from src.data.spark_data_processing import initialize_spark, load_data, preprocess_data
+from src.data.spark_data_processing import initialize_spark, load_data, preprocess_data, load_data_raw
 from src.models.spark_model_training import train_lstm_model, evaluate_model
 from src.models.trends.find_trends import find_trends
 from src.models.trends.find_breakouts import find_breakouts
+from src.utils.helpers import read_path_dir
 
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
@@ -45,7 +45,7 @@ def create_sequences(data, seq_length):
 
 def main():
     spark = initialize_spark("StockAnalysis")
-    data_dir = os.path.join("data/raw")
+    data_dir = read_path_dir("data/raw")
     files = [f for f in os.listdir(data_dir) if f.endswith('.csv')]
     seq_length = 60
 
@@ -103,11 +103,11 @@ def main():
         predictions.toPandas().to_csv(output_path, index=False)
         print(f"Predictions saved to {output_path}")
 
-    data = load_data_raw()
-    predictions_final = evaluate_model(model, data, spark)
-    output_path = os.path.join("data/processed", "predictions_win.csv")
-    predictions_final.toPandas().to_csv(output_path, index=False)
-    print(f"Predictions saved to {output_path}")
+    #data = load_data_raw(spark, f"{data_dir}/data/raw/winfut.csv")
+    #predictions_final = evaluate_model(model, data, spark)
+    #output_path = os.path.join("data/processed", "predictions_win.csv")
+    #predictions_final.toPandas().to_csv(output_path, index=False)
+    #print(f"Predictions saved to {output_path}")
 
 
 if __name__ == "__main__":

@@ -13,6 +13,9 @@ def load_data(spark, file_path):
     df = spark.read.csv(file_path, header=True, inferSchema=True)
     return df
 
+def load_data_raw(spark, file_path):
+    df = load_data(spark, file_path)
+    return df
 
 def preprocess_data(df):
     df = df.withColumn("Date", to_date(col("Date"), "dd/MM/yyyy HH:mm"))
