@@ -1,5 +1,8 @@
 import os
+from datetime import datetime
+
 import pandas as pd
+from pyspark.sql.types import StructType, StructField, FloatType
 
 from src.data.spark_data_processing import initialize_spark, load_data, preprocess_data, load_data_raw
 from src.models.spark_model_training import train_lstm_model, evaluate_model
@@ -19,28 +22,68 @@ from src.models.trends.ict_trends import ict_trends
 # Função para carregar e preparar os dados
 def load_and_prepare_data(spark, file_path):
     data = load_data(spark, file_path)
-    #data = pd.read_csv(file_path, index_col='Date', parse_dates=True)
 
-    # Aplicar as funções para encontrar rompimentos e tendências
-    data = data.toPandas()
-    data = find_breakouts(data)
-    data = find_trends(data)
-    data = ict_trends(data)
-    data = spark.createDataFrame(data)
+    # Converter para Pandas DataFrame para aplicar as funções de rompimentos e tendências
+    data_pd = data.toPandas()
+    data_pd = find_breakouts(data_pd)
+    data_pd = find_trends(data_pd)
+    data_pd = ict_trends(data_pd)
+
+    # Converter de volta para Spark DataFrame
+    data = spark.createDataFrame(data_pd)
+
+    # Selecionar apenas as colunas numéricas para o scaler
+    numeric_columns = ["Open", "High", "Low", "Close", "Adj Close", "Volume"]
+    data_pd = data.select(numeric_columns).toPandas()
 
     # Normalizar os dados
     scaler = MinMaxScaler(feature_range=(0, 1))
-    scaled_data = scaler.fit_transform(data)
+    data_pd[numeric_columns] = scaler.fit_transform(data_pd[numeric_columns])
 
-    return scaled_data, scaler
+    # Unir as colunas normalizadas com o DataFrame original
+    data_normalized = data_pd.join(data.drop(*numeric_columns).toPandas())
+
+    return spark.createDataFrame(data_normalized), scaler
 
 
-def create_sequences(data, seq_length):
+def create_sequences(data, seq_length, spark):
     X, y = [], []
-    for i in range(len(data) - seq_length):
-        X.append(data[i:i + seq_length, :-3])
-        y.append(data[i + seq_length, -3:])
-    return np.array(X), np.array(y)
+
+    # Converter Spark DataFrame para Pandas DataFrame
+    data_pd = data.toPandas()
+
+    # Remover a coluna 'Date' e garantir que todas as colunas sejam numéricas
+    if 'Date' in data_pd.columns:
+        data_pd = data_pd.drop(columns=['Date'])
+
+    for i in range(len(data_pd) - seq_length):
+        X.append(data_pd.iloc[i:i + seq_length].values)
+        y.append(data_pd.iloc[i + seq_length].values)
+
+        # Converter listas para numpy arrays
+    sequences_np = np.array(X)
+    labels_np = np.array(y)
+
+    # Verificar se todos os elementos em sequences_np são numéricos
+    sequences_np = sequences_np.astype(float)
+    labels_np = labels_np.astype(float)
+
+    # Converter arrays numpy para listas de tuplas com valores float
+    flattened_sequences = [tuple(map(float, seq.flatten())) for seq in sequences_np]
+    flattened_labels = [tuple(map(float, label)) for label in labels_np]
+
+    # Ajustar esquema para o DataFrame Spark
+    num_features = sequences_np.shape[2]
+    seq_fields = [StructField(f"seq_{i}", FloatType(), True) for i in range(seq_length * num_features)]
+    schema_seq = StructType(seq_fields)
+    label_fields = [StructField(f"label_{i}", FloatType(), True) for i in range(labels_np.shape[1])]
+    schema_label = StructType(label_fields)
+
+    # Criar DataFrames Spark
+    sequences_spark = spark.createDataFrame(flattened_sequences, schema=schema_seq)
+    labels_spark = spark.createDataFrame(flattened_labels, schema=schema_label)
+
+    return sequences_spark, labels_spark
 
 
 def main():
@@ -57,20 +100,18 @@ def main():
         df = preprocess_data(df)
 
         # Criar sequências de dados
-        X, y = create_sequences(df, seq_length)
+        X, y = create_sequences(df, seq_length, spark)
 
-        # Calcular os indicadores de tendência
-        #ict_trends = calculate_ict_trends(df)
-        #trends = find_trends(df)
-        #breakouts = find_breakouts(df)
+        # Converter DataFrames Spark para Pandas
+        X_pd = X.toPandas()
+        y_pd = y.toPandas()
 
         # Dividir os dados em conjuntos de treinamento e teste
-        split = int(0.8 * len(X))
-        X_train, X_test = X[:split], X[split:]
-        y_train, y_test = y[:split], y[split:]
+        split = int(0.8 * len(X_pd))
+        X_train, X_test = X_pd[:split], X_pd[split:]
+        y_train, y_test = y_pd[:split], y_pd[split:]
 
         # Criar e compilar o modelo LSTM
-
         model.add(LSTM(units=50, return_sequences=True, input_shape=(X_train.shape[1], X_train.shape[2])))
         model.add(Dropout(0.2))
         model.add(LSTM(units=50, return_sequences=False))
@@ -86,13 +127,6 @@ def main():
 
         # Mostrar resultados
         print(predictions)
-
-        # Adicionar esses indicadores ao dataframe
-        #df = df.toPandas()
-        #df['ICT_Trends'] = ict_trends
-        #df['Trends'] = trends
-        #df['Breakouts'] = breakouts
-        #df = spark.createDataFrame(df)
 
         # Treinar o modelo LSTM com os novos indicadores
         model = train_lstm_model(df)

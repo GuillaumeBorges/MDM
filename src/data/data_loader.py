@@ -52,7 +52,7 @@ def download_and_save_stock_data(stock_symbol, save_path):
     stock_data.to_csv(save_path)
 
 
-def main():
+"""def main():
     # Inicializar SparkSession
     spark = SparkSession.builder \
         .master('local') \
@@ -71,6 +71,10 @@ def main():
     spark.stop()
     print("Dados das ações salvos com sucesso!")
 
+"""
+def main():
+    df = download_data('PETR4.SA', '2023-01-01', '2024-01-01')
+    print(df.head())
 
 if __name__ == "__main__":
     main()
