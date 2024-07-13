@@ -24,6 +24,7 @@ def load_data_raw(spark, file_path):
 
 def preprocess_data(df):
     df = df.withColumn("Date", to_date(col("Date"), "dd/MM/yyyy"))
+    df.index = df['Date']
 
     # Registrar a função UDF
     convert_udf = udf(american_to_brazilian_number, DoubleType())
